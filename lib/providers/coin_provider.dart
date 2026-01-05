@@ -4,7 +4,7 @@ import '../services/coingecko_service.dart';
 import '../models/market_info.dart';
 
 final coinListProvider = Provider<List<Map<String, String>>>((ref) => [
-      // Cryptocurrencies
+      // Top Cryptocurrencies
       {
         'id': 'bitcoin',
         'name': 'Bitcoin',
@@ -44,21 +44,9 @@ final coinListProvider = Provider<List<Map<String, String>>>((ref) => [
         'category': 'crypto'
       },
       {
-        'id': 'avalanche-2',
-        'name': 'Avalanche',
-        'symbol': 'AVAX',
-        'category': 'crypto'
-      },
-      {
         'id': 'dogecoin',
         'name': 'Dogecoin',
         'symbol': 'DOGE',
-        'category': 'crypto'
-      },
-      {
-        'id': 'polkadot',
-        'name': 'Polkadot',
-        'symbol': 'DOT',
         'category': 'crypto'
       },
       {
@@ -80,6 +68,18 @@ final coinListProvider = Provider<List<Map<String, String>>>((ref) => [
         'category': 'crypto'
       },
       {
+        'id': 'polkadot',
+        'name': 'Polkadot',
+        'symbol': 'DOT',
+        'category': 'crypto'
+      },
+      {
+        'id': 'avalanche-2',
+        'name': 'Avalanche',
+        'symbol': 'AVAX',
+        'category': 'crypto'
+      },
+      {
         'id': 'shiba-inu',
         'name': 'Shiba Inu',
         'symbol': 'SHIB',
@@ -92,51 +92,15 @@ final coinListProvider = Provider<List<Map<String, String>>>((ref) => [
         'category': 'crypto'
       },
       {
-        'id': 'stellar',
-        'name': 'Stellar',
-        'symbol': 'XLM',
-        'category': 'crypto'
-      },
-      {'id': 'monero', 'name': 'Monero', 'symbol': 'XMR', 'category': 'crypto'},
-      {
-        'id': 'ethereum-classic',
-        'name': 'Ethereum Classic',
-        'symbol': 'ETC',
-        'category': 'crypto'
-      },
-      {
         'id': 'cosmos',
-        'name': 'Cosmos Hub',
+        'name': 'Cosmos',
         'symbol': 'ATOM',
         'category': 'crypto'
       },
-      {
-        'id': 'filecoin',
-        'name': 'Filecoin',
-        'symbol': 'FIL',
-        'category': 'crypto'
-      },
+      {'id': 'monero', 'name': 'Monero', 'symbol': 'XMR', 'category': 'crypto'},
       {'id': 'aptos', 'name': 'Aptos', 'symbol': 'APT', 'category': 'crypto'},
-      {
-        'id': 'near',
-        'name': 'NEAR Protocol',
-        'symbol': 'NEAR',
-        'category': 'crypto'
-      },
-      {
-        'id': 'vechain',
-        'name': 'VeChain',
-        'symbol': 'VET',
-        'category': 'crypto'
-      },
-      {
-        'id': 'algorand',
-        'name': 'Algorand',
-        'symbol': 'ALGO',
-        'category': 'crypto'
-      },
 
-      // Precious Metals (tokenized)
+      // Precious Metals
       {
         'id': 'paxos-gold',
         'name': 'PAX Gold',
@@ -150,30 +114,12 @@ final coinListProvider = Provider<List<Map<String, String>>>((ref) => [
         'category': 'metals'
       },
 
-      // Stablecoins (Fiat-backed)
-      {
-        'id': 'tether',
-        'name': 'Tether USD',
-        'symbol': 'USDT',
-        'category': 'fiat'
-      },
-      {
-        'id': 'usd-coin',
-        'name': 'USD Coin',
-        'symbol': 'USDC',
-        'category': 'fiat'
-      },
+      // Stablecoins
+      {'id': 'dai', 'name': 'Dai', 'symbol': 'DAI', 'category': 'fiat'},
       {
         'id': 'binance-usd',
         'name': 'Binance USD',
         'symbol': 'BUSD',
-        'category': 'fiat'
-      },
-      {'id': 'dai', 'name': 'Dai', 'symbol': 'DAI', 'category': 'fiat'},
-      {
-        'id': 'true-usd',
-        'name': 'TrueUSD',
-        'symbol': 'TUSD',
         'category': 'fiat'
       },
     ]);

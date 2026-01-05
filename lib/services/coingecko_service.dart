@@ -7,6 +7,12 @@ class CoinGeckoService {
   static int _requestCount = 0;
   static DateTime? _lastRequestTime;
 
+  // Кэш для хранения данных
+  static final Map<String, dynamic> _cache = {};
+  static final Map<String, DateTime> _cacheTimestamps = {};
+  static const Duration _cacheDuration =
+      Duration(minutes: 2); // Кэш на 2 минуты
+
   /// Add delay to avoid rate limiting
   static Future<void> _throttle() async {
     _requestCount++;
@@ -14,18 +20,51 @@ class CoinGeckoService {
 
     if (_lastRequestTime != null) {
       final diff = now.difference(_lastRequestTime!);
-      if (diff.inMilliseconds < 1500) {
+      if (diff.inMilliseconds < 2000) {
+        // Увеличил с 1500 до 2000мс
         await Future.delayed(
-            Duration(milliseconds: 1500 - diff.inMilliseconds));
+            Duration(milliseconds: 2000 - diff.inMilliseconds));
       }
     }
 
     _lastRequestTime = DateTime.now();
   }
 
+  /// Проверка валидности кэша
+  static bool _isCacheValid(String key) {
+    if (!_cache.containsKey(key) || !_cacheTimestamps.containsKey(key)) {
+      return false;
+    }
+    final age = DateTime.now().difference(_cacheTimestamps[key]!);
+    return age < _cacheDuration;
+  }
+
+  /// Очистка кэша
+  static void clearCache() {
+    _cache.clear();
+    _cacheTimestamps.clear();
+  }
+
+  /// Получить информацию о кэше
+  static Map<String, dynamic> getCacheInfo() {
+    return {
+      'entries': _cache.length,
+      'oldestEntry': _cacheTimestamps.values.isEmpty
+          ? null
+          : _cacheTimestamps.values.reduce((a, b) => a.isBefore(b) ? a : b),
+    };
+  }
+
   /// Fetch market chart prices for [id] (e.g. 'bitcoin'), [vsCurrency] (e.g. 'usd') and [days].
   static Future<List<PricePoint>> fetchMarketChart(
       String id, String vsCurrency, int days) async {
+    final cacheKey = 'chart_$id\_$vsCurrency\_$days';
+
+    // Проверка кэша
+    if (_isCacheValid(cacheKey)) {
+      return _cache[cacheKey] as List<PricePoint>;
+    }
+
     await _throttle();
 
     final url = Uri.parse(
@@ -78,6 +117,10 @@ class CoinGeckoService {
           ));
         }
 
+        // Сохранение в кэш
+        _cache[cacheKey] = prices;
+        _cacheTimestamps[cacheKey] = DateTime.now();
+
         return prices;
       } catch (e) {
         if (attempt == 2) {
@@ -95,6 +138,13 @@ class CoinGeckoService {
   static Future<List<MarketInfo>> fetchMarkets(List<String> ids,
       {String vsCurrency = 'usd'}) async {
     if (ids.isEmpty) return [];
+
+    final cacheKey = 'markets_${ids.join('_')}_$vsCurrency';
+
+    // Проверка кэша
+    if (_isCacheValid(cacheKey)) {
+      return _cache[cacheKey] as List<MarketInfo>;
+    }
 
     await _throttle();
 
@@ -116,7 +166,7 @@ class CoinGeckoService {
         }
 
         final data = json.decode(res.body) as List;
-        return data.map((item) {
+        final markets = data.map((item) {
           final spark = <double>[];
           if (item['sparkline_in_7d'] != null &&
               item['sparkline_in_7d']['price'] != null) {
@@ -165,6 +215,12 @@ class CoinGeckoService {
                 : null,
           );
         }).toList();
+
+        // Сохранение в кэш
+        _cache[cacheKey] = markets;
+        _cacheTimestamps[cacheKey] = DateTime.now();
+
+        return markets;
       } catch (e) {
         if (attempt == 2) {
           throw Exception('CoinGecko markets error: $e');
@@ -174,5 +230,52 @@ class CoinGeckoService {
     }
 
     throw Exception('Failed to load markets after 3 attempts');
+  }
+
+  /// Fetch raw market chart data (just timestamps and prices) for candle generation
+  static Future<List<dynamic>> fetchRawMarketChart(
+      String id, String vsCurrency, int days) async {
+    final cacheKey = 'raw_$id\_$vsCurrency\_$days';
+
+    // Проверка кэша
+    if (_isCacheValid(cacheKey)) {
+      return _cache[cacheKey] as List<dynamic>;
+    }
+
+    await _throttle();
+
+    final url = Uri.parse(
+        'https://api.coingecko.com/api/v3/coins/$id/market_chart?vs_currency=$vsCurrency&days=$days');
+
+    for (int attempt = 0; attempt < 3; attempt++) {
+      try {
+        final res = await http.get(url).timeout(const Duration(seconds: 15));
+
+        if (res.statusCode == 429) {
+          await Future.delayed(Duration(seconds: 2 * (attempt + 1)));
+          continue;
+        }
+
+        if (res.statusCode != 200) {
+          throw Exception('Failed to load data: ${res.statusCode}');
+        }
+
+        final data = json.decode(res.body);
+        final rawData = data['prices'] as List;
+
+        // Сохранение в кэш
+        _cache[cacheKey] = rawData;
+        _cacheTimestamps[cacheKey] = DateTime.now();
+
+        return rawData;
+      } catch (e) {
+        if (attempt == 2) {
+          throw Exception('CoinGecko raw data error: $e');
+        }
+        await Future.delayed(Duration(seconds: 1 * (attempt + 1)));
+      }
+    }
+
+    throw Exception('Failed to load raw data after 3 attempts');
   }
 }

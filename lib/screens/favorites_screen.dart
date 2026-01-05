@@ -13,21 +13,24 @@ class FavoritesScreen extends ConsumerWidget {
     final marketsAsync = ref.watch(marketProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Favorites')),
+      appBar: AppBar(
+        title: const Text('Избранное'),
+        automaticallyImplyLeading: false,
+      ),
       body: favoritesAsync.when(
         data: (favoriteIds) {
           if (favoriteIds.isEmpty) {
-            return const Center(
+            return Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.star_border, size: 64, color: Colors.grey),
-                  SizedBox(height: 16),
-                  Text('No favorites yet',
-                      style: TextStyle(fontSize: 18, color: Colors.grey)),
-                  SizedBox(height: 8),
-                  Text('Tap the star icon on any coin to add it here',
-                      style: TextStyle(color: Colors.grey)),
+                  Icon(Icons.star_border, size: 64, color: Colors.grey[400]),
+                  const SizedBox(height: 16),
+                  Text('Нет избранных монет',
+                      style: TextStyle(fontSize: 18, color: Colors.grey[600])),
+                  const SizedBox(height: 8),
+                  Text('Нажмите на звездочку чтобы добавить',
+                      style: TextStyle(color: Colors.grey[500])),
                 ],
               ),
             );
