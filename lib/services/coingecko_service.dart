@@ -15,11 +15,37 @@ class CoinGeckoService {
         throw Exception('Failed to load data: ${res.statusCode}');
       }
       final data = json.decode(res.body);
-      final prices = (data['prices'] as List).map((p) {
-        final t = DateTime.fromMillisecondsSinceEpoch((p[0] as num).toInt());
-        final price = (p[1] as num).toDouble();
-        return PricePoint(time: t, price: price);
-      }).toList();
+
+      // Parse prices
+      final pricesList = data['prices'] as List;
+      final volumesList = data['total_volumes'] as List?;
+      final marketCapsList = data['market_caps'] as List?;
+
+      final prices = <PricePoint>[];
+      for (int i = 0; i < pricesList.length; i++) {
+        final priceData = pricesList[i];
+        final t =
+            DateTime.fromMillisecondsSinceEpoch((priceData[0] as num).toInt());
+        final price = (priceData[1] as num).toDouble();
+
+        double? volume;
+        if (volumesList != null && i < volumesList.length) {
+          volume = (volumesList[i][1] as num).toDouble();
+        }
+
+        double? marketCap;
+        if (marketCapsList != null && i < marketCapsList.length) {
+          marketCap = (marketCapsList[i][1] as num).toDouble();
+        }
+
+        prices.add(PricePoint(
+          time: t,
+          price: price,
+          volume: volume,
+          marketCap: marketCap,
+        ));
+      }
+
       return prices;
     } catch (e) {
       throw Exception('CoinGecko market_chart error: $e');

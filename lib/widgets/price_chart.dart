@@ -5,19 +5,61 @@ import '../models/price_point.dart';
 
 class PriceChart extends StatelessWidget {
   final List<PricePoint> points;
-  const PriceChart({Key? key, required this.points}) : super(key: key);
+  final String chartType; // 'price', 'volume', 'marketcap'
+
+  const PriceChart({
+    Key? key,
+    required this.points,
+    this.chartType = 'price',
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     if (points.isEmpty) return const Center(child: Text('No data'));
-    final spots = points
+
+    // Get values based on chart type
+    final values = points.map((p) {
+      switch (chartType) {
+        case 'volume':
+          return p.volume ?? 0.0;
+        case 'marketcap':
+          return p.marketCap ?? 0.0;
+        default:
+          return p.price;
+      }
+    }).toList();
+
+    final spots = values
         .asMap()
         .entries
-        .map((e) => FlSpot(e.key.toDouble(), e.value.price))
+        .map((e) => FlSpot(e.key.toDouble(), e.value))
         .toList();
-    final minY = points.map((p) => p.price).reduce((a, b) => a < b ? a : b);
-    final maxY = points.map((p) => p.price).reduce((a, b) => a > b ? a : b);
+
+    final minY = values.reduce((a, b) => a < b ? a : b);
+    final maxY = values.reduce((a, b) => a > b ? a : b);
     final padding = (maxY - minY) * 0.1;
+
+    // Chart colors based on type
+    Color chartColor;
+    Color gradientStart;
+    Color gradientEnd;
+
+    switch (chartType) {
+      case 'volume':
+        chartColor = Colors.orange;
+        gradientStart = Colors.orange.withValues(alpha: 0.5);
+        gradientEnd = Colors.orange.withValues(alpha: 0.0);
+        break;
+      case 'marketcap':
+        chartColor = Colors.purple;
+        gradientStart = Colors.purple.withValues(alpha: 0.5);
+        gradientEnd = Colors.purple.withValues(alpha: 0.0);
+        break;
+      default:
+        chartColor = Colors.green;
+        gradientStart = Colors.green.withValues(alpha: 0.5);
+        gradientEnd = Colors.green.withValues(alpha: 0.0);
+    }
 
     return Padding(
       padding: const EdgeInsets.all(16.0),
@@ -71,20 +113,29 @@ class PriceChart extends StatelessWidget {
                   final idx = spot.x.toInt().clamp(0, points.length - 1);
                   final point = points[idx];
                   final dateStr = DateFormat('MMM d, HH:mm').format(point.time);
+
+                  String mainValue;
+                  switch (chartType) {
+                    case 'volume':
+                      mainValue =
+                          'Vol: \$${NumberFormat.compact().format(point.volume ?? 0)}';
+                      break;
+                    case 'marketcap':
+                      mainValue =
+                          'Cap: \$${NumberFormat.compact().format(point.marketCap ?? 0)}';
+                      break;
+                    default:
+                      mainValue = 'Price: \$${point.price.toStringAsFixed(2)}';
+                  }
+
                   return LineTooltipItem(
                     '$dateStr\n',
                     const TextStyle(color: Colors.black54, fontSize: 11),
                     children: [
                       TextSpan(
-                        text: 'Price: \$${point.price.toStringAsFixed(2)}',
+                        text: mainValue,
                         style: const TextStyle(
                             fontWeight: FontWeight.bold, color: Colors.black87),
-                      ),
-                      TextSpan(
-                        text:
-                            '\nVol: \$${NumberFormat.compact().format(point.price * 1000000)}',
-                        style: const TextStyle(
-                            fontSize: 10, color: Colors.black54),
                       ),
                     ],
                   );
@@ -95,8 +146,7 @@ class PriceChart extends StatelessWidget {
             getTouchedSpotIndicator: (barData, spotIndexes) {
               return spotIndexes.map((index) {
                 return TouchedSpotIndicatorData(
-                  const FlLine(
-                      color: Colors.green, strokeWidth: 2, dashArray: [3, 3]),
+                  FlLine(color: chartColor, strokeWidth: 2, dashArray: [3, 3]),
                   FlDotData(
                     show: true,
                     getDotPainter: (spot, percent, barData, index) =>
@@ -104,7 +154,7 @@ class PriceChart extends StatelessWidget {
                       radius: 5,
                       color: Colors.white,
                       strokeWidth: 2,
-                      strokeColor: Colors.green,
+                      strokeColor: chartColor,
                     ),
                   ),
                 );
@@ -118,19 +168,12 @@ class PriceChart extends StatelessWidget {
               curveSmoothness: 0.35,
               preventCurveOverShooting: true,
               dotData: const FlDotData(show: false),
-              gradient: const LinearGradient(
-                colors: [Color(0xFF00C853), Color(0xFF64DD17)],
-                begin: Alignment.centerLeft,
-                end: Alignment.centerRight,
-              ),
+              color: chartColor,
               barWidth: 2.5,
               belowBarData: BarAreaData(
                 show: true,
                 gradient: LinearGradient(
-                  colors: [
-                    const Color(0xFF00C853).withValues(alpha: 0.3),
-                    const Color(0xFF64DD17).withValues(alpha: 0.05),
-                  ],
+                  colors: [gradientStart, gradientEnd],
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                 ),
