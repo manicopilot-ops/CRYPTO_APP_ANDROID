@@ -411,101 +411,60 @@ class _CoinListScreenState extends ConsumerState<CoinListScreen>
         final favoriteAsync = ref.watch(isFavoriteProvider(c['id']!));
 
         return ListTile(
-          leading: CircleAvatar(
-            child: Text(
-              c['symbol']!.substring(0, 1),
-              style: const TextStyle(fontSize: 14),
-            ),
-          ),
-          title: Text(
-            c['name']!,
-            overflow: TextOverflow.ellipsis,
-            maxLines: 1,
-          ),
-          subtitle: Text(
-            c['symbol']!,
-            overflow: TextOverflow.ellipsis,
-            maxLines: 1,
-          ),
+          leading: CircleAvatar(child: Text(c['symbol']!.substring(0, 1))),
+          title: Text(c['name']!),
+          subtitle: Text(c['symbol']!),
           trailing: mi == null
               ? const Icon(Icons.chevron_right)
-              : LayoutBuilder(
-                  builder: (context, constraints) {
-                    // Calculate available width
-                    final screenWidth = MediaQuery.of(context).size.width;
-                    final availableWidth = screenWidth * 0.4;
-
-                    return SizedBox(
-                      width: availableWidth.clamp(150, 220),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
+              : SizedBox(
+                  width: 200,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      // Favorite icon
+                      favoriteAsync.when(
+                        data: (isFav) => IconButton(
+                          icon: Icon(
+                            isFav ? Icons.star : Icons.star_border,
+                            color: isFav ? Colors.amber : Colors.grey,
+                            size: 20,
+                          ),
+                          onPressed: () async {
+                            final service = ref.read(favoritesServiceProvider);
+                            await service.toggleFavorite(c['id']!);
+                            ref.invalidate(favoritesProvider);
+                            ref.invalidate(isFavoriteProvider(c['id']!));
+                          },
+                        ),
+                        loading: () => const SizedBox(width: 20),
+                        error: (_, __) => const SizedBox(width: 20),
+                      ),
+                      Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
-                          // Favorite icon
-                          favoriteAsync.when(
-                            data: (isFav) => IconButton(
-                              icon: Icon(
-                                isFav ? Icons.star : Icons.star_border,
-                                color: isFav ? Colors.amber : Colors.grey,
-                                size: 20,
-                              ),
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(),
-                              onPressed: () async {
-                                final service =
-                                    ref.read(favoritesServiceProvider);
-                                await service.toggleFavorite(c['id']!);
-                                ref.invalidate(favoritesProvider);
-                                ref.invalidate(isFavoriteProvider(c['id']!));
-                              },
-                            ),
-                            loading: () => const SizedBox(width: 20),
-                            error: (_, __) => const SizedBox(width: 20),
-                          ),
-                          const SizedBox(width: 4),
-                          Expanded(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                FittedBox(
-                                  fit: BoxFit.scaleDown,
-                                  child: Text(
-                                    '\$${mi.currentPrice.toStringAsFixed(2)}',
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ),
-                                FittedBox(
-                                  fit: BoxFit.scaleDown,
-                                  child: Text(
-                                    mi.priceChange24h != null
-                                        ? '${mi.priceChange24h!.toStringAsFixed(2)}%'
-                                        : '-',
-                                    style: TextStyle(
-                                      color: (mi.priceChange24h ?? 0) >= 0
-                                          ? Colors.green
-                                          : Colors.red,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ),
-                              ],
+                          Text('\$${mi.currentPrice.toStringAsFixed(2)}'),
+                          Text(
+                            mi.priceChange24h != null
+                                ? '${mi.priceChange24h!.toStringAsFixed(2)}%'
+                                : '-',
+                            style: TextStyle(
+                              color: (mi.priceChange24h ?? 0) >= 0
+                                  ? Colors.green
+                                  : Colors.red,
+                              fontSize: 12,
                             ),
                           ),
-                          if (screenWidth > 360) ...[
-                            const SizedBox(width: 8),
-                            Sparkline(
-                              values: mi.sparkline,
-                              width: (availableWidth * 0.3).clamp(40, 60),
-                              height: 36,
-                              color: Colors.blue,
-                            ),
-                          ],
                         ],
                       ),
-                    );
-                  },
+                      const SizedBox(width: 8),
+                      Sparkline(
+                          values: mi.sparkline,
+                          width: 60,
+                          height: 36,
+                          color: Colors.blue),
+                    ],
+                  ),
                 ),
           onTap: () => Navigator.pushNamed(context, '/detail',
               arguments: {'id': c['id']!, 'name': c['name']!}),

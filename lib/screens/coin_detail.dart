@@ -33,10 +33,7 @@ class _CoinDetailScreenState extends ConsumerState<CoinDetailScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: FittedBox(
-          fit: BoxFit.scaleDown,
-          child: Text(name),
-        ),
+        title: Text(name),
         actions: [
           IconButton(
             icon: const Icon(Icons.notifications_outlined),
@@ -61,25 +58,151 @@ class _CoinDetailScreenState extends ConsumerState<CoinDetailScreen> {
                 final fmt = NumberFormat.simpleCurrency();
                 final cmpFmt = NumberFormat.compact();
 
-                if (isWide) {
-                  return Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Left info panel
-                      Container(
-                        width: 360,
-                        padding: const EdgeInsets.all(16.0),
+                // Both layouts now use sliding panel
+                return Stack(
+                  children: [
+                    // Chart area (full screen)
+                    AnimatedPadding(
+                      duration: const Duration(milliseconds: 300),
+                      padding: EdgeInsets.only(
+                        left: isWide && _isPanelOpen ? 400 : 0,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          // Chart type selector
+                          Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: SegmentedButton<String>(
+                              segments: isWide
+                                  ? const [
+                                      ButtonSegment(
+                                        value: 'price',
+                                        label: Text('Price'),
+                                        icon: Icon(Icons.show_chart, size: 16),
+                                      ),
+                                      ButtonSegment(
+                                        value: 'volume',
+                                        label: Text('Volume'),
+                                        icon: Icon(Icons.bar_chart, size: 16),
+                                      ),
+                                      ButtonSegment(
+                                        value: 'marketcap',
+                                        label: Text('Market Cap'),
+                                        icon: Icon(Icons.pie_chart, size: 16),
+                                      ),
+                                    ]
+                                  : const [
+                                      ButtonSegment(
+                                        value: 'price',
+                                        label: Text('Price'),
+                                        icon: Icon(Icons.show_chart, size: 14),
+                                      ),
+                                      ButtonSegment(
+                                        value: 'volume',
+                                        label: Text('Vol'),
+                                        icon: Icon(Icons.bar_chart, size: 14),
+                                      ),
+                                      ButtonSegment(
+                                        value: 'marketcap',
+                                        label: Text('Cap'),
+                                        icon: Icon(Icons.pie_chart, size: 14),
+                                      ),
+                                    ],
+                              selected: {_chartType},
+                              onSelectionChanged: (Set<String> selected) {
+                                setState(() {
+                                  _chartType = selected.first;
+                                });
+                              },
+                            ),
+                          ),
+                          // Timeframe buttons
+                          Padding(
+                            padding:
+                                const EdgeInsets.symmetric(horizontal: 8.0),
+                            child: Row(
+                              mainAxisAlignment: isWide
+                                  ? MainAxisAlignment.center
+                                  : MainAxisAlignment.end,
+                              children: [
+                                for (final d in [1, 7, 30])
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 4.0),
+                                    child: ElevatedButton(
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: days == d
+                                            ? Colors.blue
+                                            : Colors.grey[300],
+                                        foregroundColor: days == d
+                                            ? Colors.white
+                                            : Colors.black87,
+                                      ),
+                                      onPressed: () => setState(() => days = d),
+                                      child: Text('${d}d'),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          // Chart
+                          Expanded(
+                            child: asyncPrices.when(
+                              data: (points) => points.isEmpty
+                                  ? const Center(child: Text('No data'))
+                                  : PriceChart(
+                                      points: points,
+                                      chartType: _chartType,
+                                    ),
+                              loading: () => const Center(
+                                  child: CircularProgressIndicator()),
+                              error: (e, st) => Center(
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Text('Failed to load price data',
+                                        style: TextStyle(
+                                            fontWeight: FontWeight.bold)),
+                                    const SizedBox(height: 8),
+                                    Text(e.toString(),
+                                        style: const TextStyle(fontSize: 12)),
+                                    const SizedBox(height: 8),
+                                    ElevatedButton(
+                                      onPressed: () => ref.refresh(
+                                          pricesFutureProvider('$id|$days')),
+                                      child: const Text('Retry'),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Sliding info panel
+                    AnimatedPositioned(
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeInOut,
+                      left: _isPanelOpen ? 0 : (isWide ? -400 : -320),
+                      top: 0,
+                      bottom: 0,
+                      width: isWide ? 400 : 320,
+                      child: Container(
                         decoration: BoxDecoration(
                           color: Colors.white,
-                          borderRadius: BorderRadius.circular(8.0),
                           boxShadow: [
                             BoxShadow(
-                                color: Colors.black12,
-                                blurRadius: 6,
-                                offset: Offset(0, 2)),
+                                color: Colors.black26,
+                                blurRadius: 10,
+                                offset: Offset(2, 0)),
                           ],
                         ),
                         child: SingleChildScrollView(
+                          padding: const EdgeInsets.all(16.0),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -109,7 +232,7 @@ class _CoinDetailScreenState extends ConsumerState<CoinDetailScreen> {
                                 NumberFormat.simpleCurrency()
                                     .format(mi.currentPrice),
                                 style: const TextStyle(
-                                    fontSize: 32, fontWeight: FontWeight.bold),
+                                    fontSize: 28, fontWeight: FontWeight.bold),
                               ),
                               const SizedBox(height: 8),
                               Text(
@@ -117,6 +240,7 @@ class _CoinDetailScreenState extends ConsumerState<CoinDetailScreen> {
                                     ? '${mi.priceChange24h!.toStringAsFixed(2)}%'
                                     : '-',
                                 style: TextStyle(
+                                    fontSize: 16,
                                     color: (mi.priceChange24h ?? 0) >= 0
                                         ? Colors.green
                                         : Colors.red),
@@ -173,9 +297,12 @@ class _CoinDetailScreenState extends ConsumerState<CoinDetailScreen> {
                                 const SizedBox(height: 12),
                               ],
                               const Text('Market stats',
-                                  style:
-                                      TextStyle(fontWeight: FontWeight.bold)),
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14)),
                               const SizedBox(height: 8),
+                              if (mi.rank != null)
+                                _statRow('Rank', '#${mi.rank}'),
                               _statRow(
                                   'Market Cap',
                                   mi.marketCap != null
@@ -211,409 +338,52 @@ class _CoinDetailScreenState extends ConsumerState<CoinDetailScreen> {
                               const SizedBox(height: 12),
                               const Text(
                                   'Информационный просмотр — торговые операции не поддерживаются.',
-                                  style: TextStyle(color: Colors.black54)),
-                              const SizedBox(height: 12),
+                                  style: TextStyle(
+                                      fontSize: 11, color: Colors.black54)),
                             ],
                           ),
                         ),
                       ),
+                    ),
 
-                      const SizedBox(width: 16),
-
-                      // Right panel: chart + controls
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            // Chart type and timeframe buttons
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                // Chart type selector
-                                SegmentedButton<String>(
-                                  segments: const [
-                                    ButtonSegment(
-                                      value: 'price',
-                                      label: Text('Price'),
-                                      icon: Icon(Icons.show_chart, size: 16),
-                                    ),
-                                    ButtonSegment(
-                                      value: 'volume',
-                                      label: Text('Volume'),
-                                      icon: Icon(Icons.bar_chart, size: 16),
-                                    ),
-                                    ButtonSegment(
-                                      value: 'marketcap',
-                                      label: Text('Market Cap'),
-                                      icon: Icon(Icons.pie_chart, size: 16),
-                                    ),
-                                  ],
-                                  selected: {_chartType},
-                                  onSelectionChanged: (Set<String> selected) {
-                                    setState(() {
-                                      _chartType = selected.first;
-                                    });
-                                  },
-                                ),
-                                // Timeframe buttons
-                                Row(
-                                  children: [
-                                    for (final d in [1, 7, 30])
-                                      Padding(
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 4.0),
-                                        child: ElevatedButton(
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: days == d
-                                                ? Colors.blue
-                                                : Colors.grey[300],
-                                            foregroundColor: days == d
-                                                ? Colors.white
-                                                : Colors.black87,
-                                          ),
-                                          onPressed: () =>
-                                              setState(() => days = d),
-                                          child: Text('${d}d'),
-                                        ),
-                                      ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 12),
-
-                            // chart area
-                            Expanded(
-                              child: asyncPrices.when(
-                                data: (points) => points.isEmpty
-                                    ? const Center(child: Text('No data'))
-                                    : PriceChart(
-                                        points: points,
-                                        chartType: _chartType,
-                                      ),
-                                loading: () => const Center(
-                                    child: CircularProgressIndicator()),
-                                error: (e, st) => SingleChildScrollView(
-                                  padding: const EdgeInsets.all(16.0),
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      const Text('Failed to load price data',
-                                          style: TextStyle(
-                                              fontWeight: FontWeight.bold)),
-                                      const SizedBox(height: 8),
-                                      Text(e.toString()),
-                                      const SizedBox(height: 8),
-                                      Text(st.toString(),
-                                          style: const TextStyle(
-                                              fontSize: 12,
-                                              color: Colors.grey)),
-                                      const SizedBox(height: 12),
-                                      ElevatedButton(
-                                        onPressed: () => ref.refresh(
-                                            pricesFutureProvider('$id|$days')),
-                                        child: const Text('Retry'),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  );
-                } else {
-                  // Mobile layout: sliding panel over chart
-                  return Stack(
-                    children: [
-                      // Chart area (full screen)
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          // Chart type selector
-                          Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: SegmentedButton<String>(
-                              segments: const [
-                                ButtonSegment(
-                                  value: 'price',
-                                  label: Text('Price'),
-                                  icon: Icon(Icons.show_chart, size: 14),
-                                ),
-                                ButtonSegment(
-                                  value: 'volume',
-                                  label: Text('Vol'),
-                                  icon: Icon(Icons.bar_chart, size: 14),
-                                ),
-                                ButtonSegment(
-                                  value: 'marketcap',
-                                  label: Text('Cap'),
-                                  icon: Icon(Icons.pie_chart, size: 14),
-                                ),
-                              ],
-                              selected: {_chartType},
-                              onSelectionChanged: (Set<String> selected) {
-                                setState(() {
-                                  _chartType = selected.first;
-                                });
-                              },
-                            ),
-                          ),
-                          // Timeframe buttons
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
-                              for (final d in [1, 7, 30])
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 4.0),
-                                  child: ElevatedButton(
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: days == d
-                                          ? Colors.blue
-                                          : Colors.grey[300],
-                                      foregroundColor: days == d
-                                          ? Colors.white
-                                          : Colors.black87,
-                                    ),
-                                    onPressed: () => setState(() => days = d),
-                                    child: Text('${d}d'),
-                                  ),
-                                ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          // Chart
-                          Expanded(
-                            child: asyncPrices.when(
-                              data: (points) => points.isEmpty
-                                  ? const Center(child: Text('No data'))
-                                  : PriceChart(
-                                      points: points,
-                                      chartType: _chartType,
-                                    ),
-                              loading: () => const Center(
-                                  child: CircularProgressIndicator()),
-                              error: (e, st) => Center(
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Text('Failed to load price data',
-                                        style: TextStyle(
-                                            fontWeight: FontWeight.bold)),
-                                    const SizedBox(height: 8),
-                                    Text(e.toString(),
-                                        style: const TextStyle(fontSize: 12)),
-                                    const SizedBox(height: 8),
-                                    ElevatedButton(
-                                      onPressed: () => ref.refresh(
-                                          pricesFutureProvider('$id|$days')),
-                                      child: const Text('Retry'),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-
-                      // Sliding info panel
-                      AnimatedPositioned(
-                        duration: const Duration(milliseconds: 300),
-                        curve: Curves.easeInOut,
-                        left: _isPanelOpen ? 0 : -320,
-                        top: 0,
-                        bottom: 0,
-                        width: 320,
-                        child: Container(
+                    // Toggle button
+                    Positioned(
+                      left: _isPanelOpen ? (isWide ? 400 : 320) : 0,
+                      top: 60,
+                      child: GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _isPanelOpen = !_isPanelOpen;
+                          });
+                        },
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 300),
+                          width: 40,
+                          height: 80,
                           decoration: BoxDecoration(
                             color: Colors.white,
+                            borderRadius: BorderRadius.only(
+                              topRight: Radius.circular(8),
+                              bottomRight: Radius.circular(8),
+                            ),
                             boxShadow: [
                               BoxShadow(
                                   color: Colors.black26,
-                                  blurRadius: 10,
+                                  blurRadius: 6,
                                   offset: Offset(2, 0)),
                             ],
                           ),
-                          child: SingleChildScrollView(
-                            padding: const EdgeInsets.all(16.0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: Text(mi.name,
-                                          style: const TextStyle(
-                                              fontSize: 18,
-                                              fontWeight: FontWeight.bold)),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 8, vertical: 4),
-                                      decoration: BoxDecoration(
-                                          color: Colors.grey[200],
-                                          borderRadius:
-                                              BorderRadius.circular(12)),
-                                      child: Text(mi.symbol,
-                                          style: const TextStyle(fontSize: 12)),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 12),
-                                Text(
-                                  fmt.format(mi.currentPrice),
-                                  style: const TextStyle(
-                                      fontSize: 28,
-                                      fontWeight: FontWeight.bold),
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  mi.priceChange24h != null
-                                      ? '${mi.priceChange24h!.toStringAsFixed(2)}%'
-                                      : '-',
-                                  style: TextStyle(
-                                      fontSize: 16,
-                                      color: (mi.priceChange24h ?? 0) >= 0
-                                          ? Colors.green
-                                          : Colors.red),
-                                ),
-                                const SizedBox(height: 16),
-                                if (mi.low24h != null &&
-                                    mi.high24h != null) ...[
-                                  Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text(fmt.format(mi.low24h),
-                                          style: const TextStyle(fontSize: 12)),
-                                      const Text('24h Range',
-                                          style: TextStyle(
-                                              fontSize: 11,
-                                              color: Colors.black54)),
-                                      Text(fmt.format(mi.high24h),
-                                          style: const TextStyle(fontSize: 12)),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 6),
-                                  LayoutBuilder(
-                                      builder: (context, constraints) {
-                                    final low = mi.low24h!;
-                                    final high = mi.high24h!;
-                                    final pos =
-                                        ((mi.currentPrice - low) / (high - low))
-                                            .clamp(0.0, 1.0);
-                                    return Stack(
-                                      children: [
-                                        Container(
-                                          height: 6,
-                                          width: double.infinity,
-                                          decoration: BoxDecoration(
-                                              color: Colors.grey[200],
-                                              borderRadius:
-                                                  BorderRadius.circular(3)),
-                                        ),
-                                        Container(
-                                          height: 6,
-                                          width: constraints.maxWidth * pos,
-                                          decoration: BoxDecoration(
-                                            gradient: const LinearGradient(
-                                                colors: [
-                                                  Colors.yellow,
-                                                  Colors.green
-                                                ]),
-                                            borderRadius:
-                                                BorderRadius.circular(3),
-                                          ),
-                                        ),
-                                      ],
-                                    );
-                                  }),
-                                  const SizedBox(height: 12),
-                                ],
-                                const Text('Market stats',
-                                    style:
-                                        TextStyle(fontWeight: FontWeight.bold)),
-                                const SizedBox(height: 8),
-                                _statRow(
-                                    'Market Cap',
-                                    mi.marketCap != null
-                                        ? '\$${cmpFmt.format(mi.marketCap)}'
-                                        : '—'),
-                                _statRow(
-                                    '24h Volume',
-                                    mi.volume24h != null
-                                        ? '\$${cmpFmt.format(mi.volume24h)}'
-                                        : '—'),
-                                _statRow(
-                                    'Circulating',
-                                    mi.circulatingSupply != null
-                                        ? cmpFmt.format(mi.circulatingSupply)
-                                        : '—'),
-                                _statRow(
-                                    'Total Supply',
-                                    mi.totalSupply != null
-                                        ? cmpFmt.format(mi.totalSupply)
-                                        : '—'),
-                                _statRow(
-                                    'Max Supply',
-                                    mi.maxSupply != null
-                                        ? cmpFmt.format(mi.maxSupply)
-                                        : '—'),
-                                const SizedBox(height: 12),
-                                const Text(
-                                    'Информационный просмотр — торговые операции не поддерживаются.',
-                                    style: TextStyle(
-                                        fontSize: 11, color: Colors.black54)),
-                              ],
-                            ),
+                          child: Icon(
+                            _isPanelOpen
+                                ? Icons.chevron_left
+                                : Icons.chevron_right,
+                            color: Colors.blue,
                           ),
                         ),
                       ),
-
-                      // Toggle button
-                      Positioned(
-                        left: _isPanelOpen ? 320 : 0,
-                        top: 60,
-                        child: GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              _isPanelOpen = !_isPanelOpen;
-                            });
-                          },
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 300),
-                            width: 40,
-                            height: 80,
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.only(
-                                topRight: Radius.circular(8),
-                                bottomRight: Radius.circular(8),
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                    color: Colors.black26,
-                                    blurRadius: 6,
-                                    offset: Offset(2, 0)),
-                              ],
-                            ),
-                            child: Icon(
-                              _isPanelOpen
-                                  ? Icons.chevron_left
-                                  : Icons.chevron_right,
-                              color: Colors.blue,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  );
-                }
+                    ),
+                  ],
+                );
               },
             ),
           );
@@ -856,12 +626,14 @@ class _CoinDetailScreenState extends ConsumerState<CoinDetailScreen> {
 
 Widget _statRow(String label, String value) {
   return Padding(
-    padding: const EdgeInsets.symmetric(vertical: 6.0),
+    padding: const EdgeInsets.symmetric(vertical: 4.0),
     child: Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: const TextStyle(color: Colors.black54)),
-        Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
+        Text(label,
+            style: const TextStyle(color: Colors.black54, fontSize: 13)),
+        Text(value,
+            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
       ],
     ),
   );

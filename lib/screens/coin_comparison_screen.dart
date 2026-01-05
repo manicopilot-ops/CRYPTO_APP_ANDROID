@@ -20,14 +20,10 @@ class _CoinComparisonScreenState extends ConsumerState<CoinComparisonScreen> {
   Widget build(BuildContext context) {
     final coins = ref.watch(coinListProvider);
     final marketsAsync = ref.watch(marketProvider);
-    final screenWidth = MediaQuery.of(context).size.width;
 
     return Scaffold(
       appBar: AppBar(
-        title: FittedBox(
-          fit: BoxFit.scaleDown,
-          child: const Text('Compare Coins'),
-        ),
+        title: const Text('Compare Coins'),
         actions: [
           IconButton(
             icon: const Icon(Icons.add),
@@ -56,7 +52,6 @@ class _CoinComparisonScreenState extends ConsumerState<CoinComparisonScreen> {
                   padding: const EdgeInsets.all(16.0),
                   child: Wrap(
                     spacing: 8,
-                    runSpacing: 8,
                     children: _selectedCoins.map((coinId) {
                       final coin = coins.firstWhere((c) => c['id'] == coinId);
                       return Chip(
@@ -64,10 +59,7 @@ class _CoinComparisonScreenState extends ConsumerState<CoinComparisonScreen> {
                           child: Text(
                               coin['symbol']!.substring(0, 1).toUpperCase()),
                         ),
-                        label: FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: Text(coin['name']!),
-                        ),
+                        label: Text(coin['name']!),
                         onDeleted: _selectedCoins.length > 1
                             ? () {
                                 setState(() {
@@ -174,28 +166,17 @@ class _CoinComparisonScreenState extends ConsumerState<CoinComparisonScreen> {
 
   Widget _buildTimeframeButton(String value, String label) {
     final isSelected = _timeframe == value;
-    final screenWidth = MediaQuery.of(context).size.width;
-
-    return Flexible(
-      child: ElevatedButton(
-        onPressed: () {
-          setState(() {
-            _timeframe = value;
-          });
-        },
-        style: ElevatedButton.styleFrom(
-          backgroundColor: isSelected ? Colors.blue : Colors.grey[300],
-          foregroundColor: isSelected ? Colors.white : Colors.black,
-          padding: EdgeInsets.symmetric(
-            horizontal: screenWidth > 360 ? 16 : 8,
-            vertical: 8,
-          ),
-        ),
-        child: FittedBox(
-          fit: BoxFit.scaleDown,
-          child: Text(label),
-        ),
+    return ElevatedButton(
+      onPressed: () {
+        setState(() {
+          _timeframe = value;
+        });
+      },
+      style: ElevatedButton.styleFrom(
+        backgroundColor: isSelected ? Colors.blue : Colors.grey[300],
+        foregroundColor: isSelected ? Colors.white : Colors.black,
       ),
+      child: Text(label),
     );
   }
 
@@ -203,33 +184,20 @@ class _CoinComparisonScreenState extends ConsumerState<CoinComparisonScreen> {
       List<dynamic> markets, List<Map<String, String>> coins) {
     final formatter = NumberFormat.currency(symbol: '\$', decimalDigits: 2);
     final compactFormatter = NumberFormat.compact();
-    final screenWidth = MediaQuery.of(context).size.width;
-    final smallScreen = screenWidth < 360;
 
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16.0),
         child: DataTable(
-          columnSpacing: smallScreen ? 24 : 32,
-          headingTextStyle: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: smallScreen ? 12 : 14,
-          ),
-          dataTextStyle: TextStyle(
-            fontSize: smallScreen ? 11 : 13,
-          ),
           columns: [
             const DataColumn(label: Text('Metric')),
             ...markets.map((market) {
               final coin = coins.firstWhere((c) => c['id'] == market.id);
               return DataColumn(
-                label: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text(
-                    coin['symbol']!.toUpperCase(),
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
+                label: Text(
+                  coin['symbol']!.toUpperCase(),
+                  style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
               );
             }).toList(),
@@ -237,20 +205,12 @@ class _CoinComparisonScreenState extends ConsumerState<CoinComparisonScreen> {
           rows: [
             DataRow(cells: [
               const DataCell(Text('Rank')),
-              ...markets
-                  .map((m) => DataCell(FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Text('#${m.rank}'),
-                      )))
-                  .toList(),
+              ...markets.map((m) => DataCell(Text('#${m.rank}'))).toList(),
             ]),
             DataRow(cells: [
               const DataCell(Text('Price')),
               ...markets.map((m) {
-                return DataCell(FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text(formatter.format(m.currentPrice)),
-                ));
+                return DataCell(Text(formatter.format(m.currentPrice)));
               }).toList(),
             ]),
             DataRow(cells: [
@@ -258,14 +218,11 @@ class _CoinComparisonScreenState extends ConsumerState<CoinComparisonScreen> {
               ...markets.map((m) {
                 final change = m.priceChangePercentage24h ?? 0;
                 return DataCell(
-                  FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text(
-                      '${change >= 0 ? '+' : ''}${change.toStringAsFixed(2)}%',
-                      style: TextStyle(
-                        color: change >= 0 ? Colors.green : Colors.red,
-                        fontWeight: FontWeight.bold,
-                      ),
+                  Text(
+                    '${change >= 0 ? '+' : ''}${change.toStringAsFixed(2)}%',
+                    style: TextStyle(
+                      color: change >= 0 ? Colors.green : Colors.red,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
                 );
@@ -274,19 +231,15 @@ class _CoinComparisonScreenState extends ConsumerState<CoinComparisonScreen> {
             DataRow(cells: [
               const DataCell(Text('Market Cap')),
               ...markets.map((m) {
-                return DataCell(FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text('\$${compactFormatter.format(m.marketCap)}'),
-                ));
+                return DataCell(
+                    Text('\$${compactFormatter.format(m.marketCap)}'));
               }).toList(),
             ]),
             DataRow(cells: [
               const DataCell(Text('Volume 24h')),
               ...markets.map((m) {
-                return DataCell(FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text('\$${compactFormatter.format(m.totalVolume)}'),
-                ));
+                return DataCell(
+                    Text('\$${compactFormatter.format(m.totalVolume)}'));
               }).toList(),
             ]),
           ],
