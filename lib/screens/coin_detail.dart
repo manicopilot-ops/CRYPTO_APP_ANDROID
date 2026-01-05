@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:webview_flutter/webview_flutter.dart';
 
 import '../models/market_info.dart';
 import '../models/price_alert.dart';
@@ -27,6 +28,9 @@ class _CoinDetailScreenState extends ConsumerState<CoinDetailScreen> {
   bool _isControlsVisible = true;
   String _chartType = 'price'; // 'price', 'volume', 'marketcap'
   String _chartStyle = 'line'; // 'line' или 'candle'
+  bool _showTradingView = false; // Переключатель для TradingView
+  WebViewController?
+      _webViewController; // Nullable для отложенной инициализации
 
   @override
   Widget build(BuildContext context) {
@@ -97,26 +101,28 @@ class _CoinDetailScreenState extends ConsumerState<CoinDetailScreen> {
                               children: [
                                 // Кнопка TradingView
                                 TextButton.icon(
-                                  onPressed: () async {
-                                    // Открыть TradingView в браузере
-                                    final url = Uri.parse(
-                                        'https://www.tradingview.com/chart/?symbol=${mi.symbol.toUpperCase()}USDT');
-                                    if (await canLaunchUrl(url)) {
-                                      await launchUrl(url,
-                                          mode: LaunchMode.externalApplication);
-                                    } else {
-                                      if (context.mounted) {
-                                        ScaffoldMessenger.of(context)
-                                            .showSnackBar(
-                                          SnackBar(
-                                              content: Text(
-                                                  'Не удалось открыть TradingView')),
-                                        );
+                                  onPressed: () {
+                                    setState(() {
+                                      _showTradingView = !_showTradingView;
+                                      if (_showTradingView) {
+                                        // Инициализация WebView контроллера
+                                        _webViewController = WebViewController()
+                                          ..setJavaScriptMode(
+                                              JavaScriptMode.unrestricted)
+                                          ..loadRequest(Uri.parse(
+                                              'https://www.tradingview.com/chart/?symbol=BINANCE:${mi.symbol.toUpperCase()}USDT&theme=dark&interval=D'));
                                       }
-                                    }
+                                    });
                                   },
-                                  icon: const Icon(Icons.open_in_new, size: 12),
-                                  label: const Text('TradingView',
+                                  icon: Icon(
+                                      _showTradingView
+                                          ? Icons.show_chart
+                                          : Icons.candlestick_chart,
+                                      size: 12),
+                                  label: Text(
+                                      _showTradingView
+                                          ? 'Our Chart'
+                                          : 'TradingView',
                                       style: TextStyle(fontSize: 10)),
                                   style: TextButton.styleFrom(
                                     padding: const EdgeInsets.symmetric(
@@ -279,99 +285,160 @@ class _CoinDetailScreenState extends ConsumerState<CoinDetailScreen> {
                           const SizedBox(height: 4),
                           // Chart
                           Expanded(
-                            child: asyncPrices.when(
-                              data: (points) {
-                                if (points.isEmpty) {
-                                  return const Center(child: Text('No data'));
-                                }
+                            child: _showTradingView &&
+                                    _webViewController != null
+                                ? Stack(
+                                    children: [
+                                      WebViewWidget(
+                                          controller: _webViewController!),
+                                      Center(
+                                        child: CircularProgressIndicator(),
+                                      ),
+                                    ],
+                                  )
+                                : _showTradingView
+                                    ? Center(
+                                        child: Column(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          children: [
+                                            Icon(Icons.web,
+                                                size: 64,
+                                                color: Colors.grey[400]),
+                                            SizedBox(height: 16),
+                                            Text(
+                                              'TradingView не поддерживается в Web',
+                                              style: TextStyle(fontSize: 16),
+                                            ),
+                                            SizedBox(height: 8),
+                                            Text(
+                                              'Запустите приложение на Android эмуляторе',
+                                              style: TextStyle(
+                                                  fontSize: 12,
+                                                  color: Colors.grey[500]),
+                                            ),
+                                            SizedBox(height: 16),
+                                            ElevatedButton(
+                                              onPressed: () {
+                                                setState(() {
+                                                  _showTradingView = false;
+                                                });
+                                              },
+                                              child:
+                                                  Text('Вернуться к графику'),
+                                            ),
+                                          ],
+                                        ),
+                                      )
+                                    : asyncPrices.when(
+                                        data: (points) {
+                                          if (points.isEmpty) {
+                                            return const Center(
+                                                child: Text('No data'));
+                                          }
 
-                                // Если выбран свечной график и тип - цена
-                                if (_chartStyle == 'candle' &&
-                                    _chartType == 'price') {
-                                  // Получаем сырые данные для создания свечей
-                                  return FutureBuilder<List<dynamic>>(
-                                    future:
-                                        CoinGeckoService.fetchRawMarketChart(
-                                            id, 'usd', days),
-                                    builder: (context, snapshot) {
-                                      if (snapshot.connectionState ==
-                                          ConnectionState.waiting) {
-                                        return const Center(
-                                            child: CircularProgressIndicator());
-                                      }
-                                      if (snapshot.hasError) {
-                                        return Center(
+                                          // Если выбран свечной график и тип - цена
+                                          if (_chartStyle == 'candle' &&
+                                              _chartType == 'price') {
+                                            // Получаем сырые данные для создания свечей
+                                            return FutureBuilder<List<dynamic>>(
+                                              future: CoinGeckoService
+                                                  .fetchRawMarketChart(
+                                                      id, 'usd', days),
+                                              builder: (context, snapshot) {
+                                                if (snapshot.connectionState ==
+                                                    ConnectionState.waiting) {
+                                                  return const Center(
+                                                      child:
+                                                          CircularProgressIndicator());
+                                                }
+                                                if (snapshot.hasError) {
+                                                  return Center(
+                                                    child: Column(
+                                                      mainAxisSize:
+                                                          MainAxisSize.min,
+                                                      children: [
+                                                        const Text(
+                                                            'Failed to load chart data',
+                                                            style: TextStyle(
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .bold)),
+                                                        const SizedBox(
+                                                            height: 8),
+                                                        Text(
+                                                            snapshot.error
+                                                                .toString(),
+                                                            style:
+                                                                const TextStyle(
+                                                                    fontSize:
+                                                                        12)),
+                                                        const SizedBox(
+                                                            height: 8),
+                                                        ElevatedButton(
+                                                          onPressed: () {
+                                                            setState(() {
+                                                              // Trigger rebuild
+                                                            });
+                                                          },
+                                                          child: const Text(
+                                                              'Retry'),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  );
+                                                }
+                                                if (!snapshot.hasData ||
+                                                    snapshot.data!.isEmpty) {
+                                                  return const Center(
+                                                      child: Text('No data'));
+                                                }
+
+                                                // Создаем свечи из сырых данных
+                                                final candles =
+                                                    CandleData.fromPricePoints(
+                                                        snapshot.data!,
+                                                        50 // количество свечей
+                                                        );
+
+                                                return CandlestickChart(
+                                                    candles: candles);
+                                              },
+                                            );
+                                          }
+
+                                          // Иначе показываем линейный график
+                                          return PriceChart(
+                                            points: points,
+                                            chartType: _chartType,
+                                          );
+                                        },
+                                        loading: () => const Center(
+                                            child: CircularProgressIndicator()),
+                                        error: (e, st) => Center(
                                           child: Column(
                                             mainAxisSize: MainAxisSize.min,
                                             children: [
                                               const Text(
-                                                  'Failed to load chart data',
+                                                  'Failed to load price data',
                                                   style: TextStyle(
                                                       fontWeight:
                                                           FontWeight.bold)),
                                               const SizedBox(height: 8),
-                                              Text(snapshot.error.toString(),
+                                              Text(e.toString(),
                                                   style: const TextStyle(
                                                       fontSize: 12)),
                                               const SizedBox(height: 8),
                                               ElevatedButton(
-                                                onPressed: () {
-                                                  setState(() {
-                                                    // Trigger rebuild
-                                                  });
-                                                },
+                                                onPressed: () => ref.refresh(
+                                                    pricesFutureProvider(
+                                                        '$id|$days')),
                                                 child: const Text('Retry'),
                                               ),
                                             ],
                                           ),
-                                        );
-                                      }
-                                      if (!snapshot.hasData ||
-                                          snapshot.data!.isEmpty) {
-                                        return const Center(
-                                            child: Text('No data'));
-                                      }
-
-                                      // Создаем свечи из сырых данных
-                                      final candles =
-                                          CandleData.fromPricePoints(
-                                              snapshot.data!,
-                                              50 // количество свечей
-                                              );
-
-                                      return CandlestickChart(candles: candles);
-                                    },
-                                  );
-                                }
-
-                                // Иначе показываем линейный график
-                                return PriceChart(
-                                  points: points,
-                                  chartType: _chartType,
-                                );
-                              },
-                              loading: () => const Center(
-                                  child: CircularProgressIndicator()),
-                              error: (e, st) => Center(
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Text('Failed to load price data',
-                                        style: TextStyle(
-                                            fontWeight: FontWeight.bold)),
-                                    const SizedBox(height: 8),
-                                    Text(e.toString(),
-                                        style: const TextStyle(fontSize: 12)),
-                                    const SizedBox(height: 8),
-                                    ElevatedButton(
-                                      onPressed: () => ref.refresh(
-                                          pricesFutureProvider('$id|$days')),
-                                      child: const Text('Retry'),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
+                                        ),
+                                      ),
                           ),
                         ],
                       ),
