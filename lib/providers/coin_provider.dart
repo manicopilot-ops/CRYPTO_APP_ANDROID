@@ -4,9 +4,178 @@ import '../services/coingecko_service.dart';
 import '../models/market_info.dart';
 
 final coinListProvider = Provider<List<Map<String, String>>>((ref) => [
-      {'id': 'bitcoin', 'name': 'Bitcoin', 'symbol': 'BTC'},
-      {'id': 'ethereum', 'name': 'Ethereum', 'symbol': 'ETH'},
-      {'id': 'litecoin', 'name': 'Litecoin', 'symbol': 'LTC'},
+      // Cryptocurrencies
+      {
+        'id': 'bitcoin',
+        'name': 'Bitcoin',
+        'symbol': 'BTC',
+        'category': 'crypto'
+      },
+      {
+        'id': 'ethereum',
+        'name': 'Ethereum',
+        'symbol': 'ETH',
+        'category': 'crypto'
+      },
+      {
+        'id': 'tether',
+        'name': 'Tether',
+        'symbol': 'USDT',
+        'category': 'crypto'
+      },
+      {
+        'id': 'binancecoin',
+        'name': 'BNB',
+        'symbol': 'BNB',
+        'category': 'crypto'
+      },
+      {'id': 'solana', 'name': 'Solana', 'symbol': 'SOL', 'category': 'crypto'},
+      {'id': 'ripple', 'name': 'XRP', 'symbol': 'XRP', 'category': 'crypto'},
+      {
+        'id': 'usd-coin',
+        'name': 'USD Coin',
+        'symbol': 'USDC',
+        'category': 'crypto'
+      },
+      {
+        'id': 'cardano',
+        'name': 'Cardano',
+        'symbol': 'ADA',
+        'category': 'crypto'
+      },
+      {
+        'id': 'avalanche-2',
+        'name': 'Avalanche',
+        'symbol': 'AVAX',
+        'category': 'crypto'
+      },
+      {
+        'id': 'dogecoin',
+        'name': 'Dogecoin',
+        'symbol': 'DOGE',
+        'category': 'crypto'
+      },
+      {
+        'id': 'polkadot',
+        'name': 'Polkadot',
+        'symbol': 'DOT',
+        'category': 'crypto'
+      },
+      {
+        'id': 'chainlink',
+        'name': 'Chainlink',
+        'symbol': 'LINK',
+        'category': 'crypto'
+      },
+      {
+        'id': 'polygon',
+        'name': 'Polygon',
+        'symbol': 'MATIC',
+        'category': 'crypto'
+      },
+      {
+        'id': 'litecoin',
+        'name': 'Litecoin',
+        'symbol': 'LTC',
+        'category': 'crypto'
+      },
+      {
+        'id': 'shiba-inu',
+        'name': 'Shiba Inu',
+        'symbol': 'SHIB',
+        'category': 'crypto'
+      },
+      {
+        'id': 'uniswap',
+        'name': 'Uniswap',
+        'symbol': 'UNI',
+        'category': 'crypto'
+      },
+      {
+        'id': 'stellar',
+        'name': 'Stellar',
+        'symbol': 'XLM',
+        'category': 'crypto'
+      },
+      {'id': 'monero', 'name': 'Monero', 'symbol': 'XMR', 'category': 'crypto'},
+      {
+        'id': 'ethereum-classic',
+        'name': 'Ethereum Classic',
+        'symbol': 'ETC',
+        'category': 'crypto'
+      },
+      {
+        'id': 'cosmos',
+        'name': 'Cosmos Hub',
+        'symbol': 'ATOM',
+        'category': 'crypto'
+      },
+      {
+        'id': 'filecoin',
+        'name': 'Filecoin',
+        'symbol': 'FIL',
+        'category': 'crypto'
+      },
+      {'id': 'aptos', 'name': 'Aptos', 'symbol': 'APT', 'category': 'crypto'},
+      {
+        'id': 'near',
+        'name': 'NEAR Protocol',
+        'symbol': 'NEAR',
+        'category': 'crypto'
+      },
+      {
+        'id': 'vechain',
+        'name': 'VeChain',
+        'symbol': 'VET',
+        'category': 'crypto'
+      },
+      {
+        'id': 'algorand',
+        'name': 'Algorand',
+        'symbol': 'ALGO',
+        'category': 'crypto'
+      },
+
+      // Precious Metals (tokenized)
+      {
+        'id': 'paxos-gold',
+        'name': 'PAX Gold',
+        'symbol': 'PAXG',
+        'category': 'metals'
+      },
+      {
+        'id': 'tether-gold',
+        'name': 'Tether Gold',
+        'symbol': 'XAUT',
+        'category': 'metals'
+      },
+
+      // Stablecoins (Fiat-backed)
+      {
+        'id': 'tether',
+        'name': 'Tether USD',
+        'symbol': 'USDT',
+        'category': 'fiat'
+      },
+      {
+        'id': 'usd-coin',
+        'name': 'USD Coin',
+        'symbol': 'USDC',
+        'category': 'fiat'
+      },
+      {
+        'id': 'binance-usd',
+        'name': 'Binance USD',
+        'symbol': 'BUSD',
+        'category': 'fiat'
+      },
+      {'id': 'dai', 'name': 'Dai', 'symbol': 'DAI', 'category': 'fiat'},
+      {
+        'id': 'true-usd',
+        'name': 'TrueUSD',
+        'symbol': 'TUSD',
+        'category': 'fiat'
+      },
     ]);
 
 final pricesFutureProvider = FutureProvider.family<List<PricePoint>, String>(

@@ -15,6 +15,7 @@ class _CoinListScreenState extends ConsumerState<CoinListScreen>
     with SingleTickerProviderStateMixin {
   String _searchQuery = '';
   String _sortBy = 'rank';
+  String _categoryFilter = 'all'; // all, crypto, metals, fiat
   late TabController _tabController;
 
   @override
@@ -130,6 +131,74 @@ class _CoinListScreenState extends ConsumerState<CoinListScreen>
               ),
             ],
           ),
+          // Category filter
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.filter_list),
+            tooltip: 'Filter by Category',
+            onSelected: (value) {
+              setState(() {
+                _categoryFilter = value;
+              });
+            },
+            itemBuilder: (context) => [
+              PopupMenuItem(
+                value: 'all',
+                child: Row(
+                  children: [
+                    Icon(Icons.all_inclusive, size: 20),
+                    SizedBox(width: 8),
+                    Text('All Assets'),
+                    if (_categoryFilter == 'all') ...[
+                      Spacer(),
+                      Icon(Icons.check, size: 20, color: Colors.blue),
+                    ],
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: 'crypto',
+                child: Row(
+                  children: [
+                    Icon(Icons.currency_bitcoin, size: 20),
+                    SizedBox(width: 8),
+                    Text('Crypto'),
+                    if (_categoryFilter == 'crypto') ...[
+                      Spacer(),
+                      Icon(Icons.check, size: 20, color: Colors.blue),
+                    ],
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: 'metals',
+                child: Row(
+                  children: [
+                    Icon(Icons.workspaces, size: 20),
+                    SizedBox(width: 8),
+                    Text('Precious Metals'),
+                    if (_categoryFilter == 'metals') ...[
+                      Spacer(),
+                      Icon(Icons.check, size: 20, color: Colors.blue),
+                    ],
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: 'fiat',
+                child: Row(
+                  children: [
+                    Icon(Icons.attach_money, size: 20),
+                    SizedBox(width: 8),
+                    Text('Stablecoins'),
+                    if (_categoryFilter == 'fiat') ...[
+                      Spacer(),
+                      Icon(Icons.check, size: 20, color: Colors.blue),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
           IconButton(
             icon: const Icon(Icons.star),
             onPressed: () => Navigator.pushNamed(context, '/favorites'),
@@ -141,9 +210,9 @@ class _CoinListScreenState extends ConsumerState<CoinListScreen>
             tooltip: 'Price Alerts',
           ),
           IconButton(
-            icon: const Icon(Icons.currency_exchange),
-            onPressed: () => Navigator.pushNamed(context, '/converter'),
-            tooltip: 'Currency Converter',
+            icon: const Icon(Icons.compare_arrows),
+            onPressed: () => Navigator.pushNamed(context, '/comparison'),
+            tooltip: 'Compare Coins',
           ),
         ],
       ),
@@ -152,15 +221,20 @@ class _CoinListScreenState extends ConsumerState<CoinListScreen>
           // build list by mapping markets to coins order
           final map = {for (var m in markets) m.id: m};
 
-          // Filter coins based on search query
-          var filteredCoins = _searchQuery.isEmpty
+          // Filter by category first
+          var filteredCoins = _categoryFilter == 'all'
               ? coins
-              : coins.where((c) {
-                  final query = _searchQuery.toLowerCase();
-                  return c['name']!.toLowerCase().contains(query) ||
-                      c['symbol']!.toLowerCase().contains(query) ||
-                      c['id']!.toLowerCase().contains(query);
-                }).toList();
+              : coins.where((c) => c['category'] == _categoryFilter).toList();
+
+          // Then filter by search query
+          if (_searchQuery.isNotEmpty) {
+            filteredCoins = filteredCoins.where((c) {
+              final query = _searchQuery.toLowerCase();
+              return c['name']!.toLowerCase().contains(query) ||
+                  c['symbol']!.toLowerCase().contains(query) ||
+                  c['id']!.toLowerCase().contains(query);
+            }).toList();
+          }
 
           // Sort coins
           if (_sortBy != 'rank') {
@@ -337,60 +411,101 @@ class _CoinListScreenState extends ConsumerState<CoinListScreen>
         final favoriteAsync = ref.watch(isFavoriteProvider(c['id']!));
 
         return ListTile(
-          leading: CircleAvatar(child: Text(c['symbol']!.substring(0, 1))),
-          title: Text(c['name']!),
-          subtitle: Text(c['symbol']!),
+          leading: CircleAvatar(
+            child: Text(
+              c['symbol']!.substring(0, 1),
+              style: const TextStyle(fontSize: 14),
+            ),
+          ),
+          title: Text(
+            c['name']!,
+            overflow: TextOverflow.ellipsis,
+            maxLines: 1,
+          ),
+          subtitle: Text(
+            c['symbol']!,
+            overflow: TextOverflow.ellipsis,
+            maxLines: 1,
+          ),
           trailing: mi == null
               ? const Icon(Icons.chevron_right)
-              : SizedBox(
-                  width: 200,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      // Favorite icon
-                      favoriteAsync.when(
-                        data: (isFav) => IconButton(
-                          icon: Icon(
-                            isFav ? Icons.star : Icons.star_border,
-                            color: isFav ? Colors.amber : Colors.grey,
-                            size: 20,
-                          ),
-                          onPressed: () async {
-                            final service = ref.read(favoritesServiceProvider);
-                            await service.toggleFavorite(c['id']!);
-                            ref.invalidate(favoritesProvider);
-                            ref.invalidate(isFavoriteProvider(c['id']!));
-                          },
-                        ),
-                        loading: () => const SizedBox(width: 20),
-                        error: (_, __) => const SizedBox(width: 20),
-                      ),
-                      Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.end,
+              : LayoutBuilder(
+                  builder: (context, constraints) {
+                    // Calculate available width
+                    final screenWidth = MediaQuery.of(context).size.width;
+                    final availableWidth = screenWidth * 0.4;
+
+                    return SizedBox(
+                      width: availableWidth.clamp(150, 220),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
                         children: [
-                          Text('\$${mi.currentPrice.toStringAsFixed(2)}'),
-                          Text(
-                            mi.priceChange24h != null
-                                ? '${mi.priceChange24h!.toStringAsFixed(2)}%'
-                                : '-',
-                            style: TextStyle(
-                              color: (mi.priceChange24h ?? 0) >= 0
-                                  ? Colors.green
-                                  : Colors.red,
-                              fontSize: 12,
+                          // Favorite icon
+                          favoriteAsync.when(
+                            data: (isFav) => IconButton(
+                              icon: Icon(
+                                isFav ? Icons.star : Icons.star_border,
+                                color: isFav ? Colors.amber : Colors.grey,
+                                size: 20,
+                              ),
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                              onPressed: () async {
+                                final service =
+                                    ref.read(favoritesServiceProvider);
+                                await service.toggleFavorite(c['id']!);
+                                ref.invalidate(favoritesProvider);
+                                ref.invalidate(isFavoriteProvider(c['id']!));
+                              },
+                            ),
+                            loading: () => const SizedBox(width: 20),
+                            error: (_, __) => const SizedBox(width: 20),
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: Text(
+                                    '\$${mi.currentPrice.toStringAsFixed(2)}',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                                FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: Text(
+                                    mi.priceChange24h != null
+                                        ? '${mi.priceChange24h!.toStringAsFixed(2)}%'
+                                        : '-',
+                                    style: TextStyle(
+                                      color: (mi.priceChange24h ?? 0) >= 0
+                                          ? Colors.green
+                                          : Colors.red,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
+                          if (screenWidth > 360) ...[
+                            const SizedBox(width: 8),
+                            Sparkline(
+                              values: mi.sparkline,
+                              width: (availableWidth * 0.3).clamp(40, 60),
+                              height: 36,
+                              color: Colors.blue,
+                            ),
+                          ],
                         ],
                       ),
-                      const SizedBox(width: 8),
-                      Sparkline(
-                          values: mi.sparkline,
-                          width: 60,
-                          height: 36,
-                          color: Colors.blue),
-                    ],
-                  ),
+                    );
+                  },
                 ),
           onTap: () => Navigator.pushNamed(context, '/detail',
               arguments: {'id': c['id']!, 'name': c['name']!}),

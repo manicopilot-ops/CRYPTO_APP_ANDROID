@@ -33,7 +33,10 @@ class _CoinDetailScreenState extends ConsumerState<CoinDetailScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(name),
+        title: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(name),
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.notifications_outlined),

@@ -4,7 +4,7 @@ import 'screens/coin_list.dart';
 import 'screens/coin_detail.dart';
 import 'screens/favorites_screen.dart';
 import 'screens/price_alerts_screen.dart';
-import 'screens/currency_converter_screen.dart';
+import 'screens/coin_comparison_screen.dart';
 import 'services/notification_service.dart';
 import 'services/price_monitor_service.dart';
 
@@ -39,9 +39,9 @@ class MyApp extends StatelessWidget {
         if (settings.name == '/alerts') {
           return MaterialPageRoute(builder: (_) => const PriceAlertsScreen());
         }
-        if (settings.name == '/converter') {
+        if (settings.name == '/comparison') {
           return MaterialPageRoute(
-              builder: (_) => const CurrencyConverterScreen());
+              builder: (_) => const CoinComparisonScreen());
         }
         if (settings.name == '/detail') {
           return MaterialPageRoute(
